@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../js/resource.js"></script>
+</head>
+<body id="web">
+        <mk-panel slot="left" height="100%" title="" >
+            <div class="row" style="height: 100%">
+                <ul id="deviceType" class="easyui-tree">
+                </ul>
+            </div>
+        </mk-panel>
+<script>
+    var myVue = new Vue({
+        el:"#web",
+        ready: function () {
+            this.initTree();
+            //添加弹出框按钮
+            MainFrameUtil.setDialogButtons([
+                {text:"保存",type:"primary",handler:this.save},
+            ],"selectDeviceTypeTree");
+        },
+        data:{
+            params:{
+                typeName:'',
+                deviceType:'',
+            }
+        },
+        methods:{
+            /**
+             * 初始化设备类型树
+             */
+            initTree: function () {
+                var me = this;
+                $('#deviceType').tree({
+                    url: basePath+'deviceTypeController/deviceTypeTree',
+                    method: 'GET',
+                    animate: true,
+                    onClick:function (node) {
+                        me.params.deviceType = node.id;
+                        me.params.typeName = node.text;
+                    }
+                });
+            },
+            save:function () {
+                MainFrameUtil.setParams({params:this.params},"selectDeviceTypeTree");//必须保证此弹出框已经弹出,否则会报错
+                MainFrameUtil.closeDialog("selectDeviceTypeTree");//关闭弹出框
+            }
+        }
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="deviceInfo.sql">
+    <select id="listDeviceInfo" resultType="com.hhwy.device.info.domain.DeviceInfo">
+    SELECT
+    id,
+    device_type deviceType,
+    device_name deviceName,
+    device_code deviceCode
+    FROM device_info
+        WHERE 1=1
+        <if test="deviceType != '' and deviceType != null">
+            AND device_Type=#{deviceType}
+        </if>
+        <if test="deviceName != '' and deviceName != null">
+            AND device_name like concat('%',#{deviceName},'%')
+        </if>
+        <if test="deviceCode != '' and deviceCode != null">
+            AND device_code=#{deviceCode}
+        </if>
+        <if test="pagingFlag == true">
+            limit #{startIndex},#{rows}
+        </if>
+    </select>
+    <select id="countDeviceInfo" resultType="int">
+        select count(*) from device_info where 1=1
+        <if test="deviceType != '' and deviceType != null">
+            AND device_Type=#{deviceType}
+        </if>
+        <if test="deviceName != '' and deviceName != null">
+            AND device_name like concat('%',#{deviceName},'%')
+        </if>
+        <if test="deviceCode != '' and deviceCode != null">
+            AND device_code=#{deviceCode}
+        </if>
+    </select>
+    <insert id="insertDeviceInfo">
+        insert into device_info(id,device_type,device_name,device_code) values (#{id},#{deviceType},#{deviceName},#{deviceCode})
+    </insert>
+    <delete id="delDeviceInfo">
+        delete from device_info where id=#{id}
+    </delete>
+    <update id="updateDeviceInfo">
+        update device_info
+        set
+        device_type=#{deviceType},
+        device_name=#{deviceName}
+        where id=#{id}
+    </update>
+    <select id="selectTypeName" resultType="String">
+        SELECT
+        type_name
+        FROM device_type
+        WHERE id = #{typeCode}
+    </select>
+</mapper>

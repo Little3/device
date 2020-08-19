@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../js/resource.js"></script>
+</head>
+<body id="device">
+<mk-panel height="100%" title="">
+    <mk-left-right left_width="15%" height="100%">
+        <mk-panel slot="left" height="100%" title="">
+            <div class="input-group">
+                <input type="text" @keyup.13="search2" v-model="searchText" class="form-control" placeholder="查询">
+                <span class="input-group-btn">
+                        <button class="btn btn-primary" type="button" @click="search2">查询</button>
+            </span>
+            </div>
+            <div class="row" style="height: 100%">
+                <ul id="deviceType">
+                </ul>
+            </div>
+            <div id="menu" class="easyui-menu" style="width:120px;">
+                <su-button class="btn-operator" s-type="default" labeled="true" label-ico="plus"
+                           v-on:click="addDeviceType">新增
+                </su-button>
+                <su-button class="btn-operator" s-type="default" labeled="true" label-ico="edit"
+                           v-on:click="editDeviceType">编辑
+                </su-button>
+                <su-button class="btn-operator" s-type="default" labeled="true" label-ico="trash-o"
+                           v-on:click="delDeviceType">删除
+                </su-button>
+            </div>
+        </mk-panel>
+        <mk-panel slot="right" height="100%" title="">
+            <mk-form-panel height="100%">
+                <mk-form-row>
+                    <su-form-group label-name="设备名称" class="form-control-row" col="3" label-width="100px"
+                                   label-align="right">
+                        <su-textbox :data.sync="params.deviceName"></su-textbox>
+                    </su-form-group>
+                    <su-form-group label-name="设备编号" class="form-control-row" col="3" label-width="100px"
+                                   label-align="right">
+                        <su-textbox :data.sync="params.deviceCode"></su-textbox>
+                    </su-form-group>
+                    <su-button s-type="primary" @click="search">查询</su-button>
+                </mk-form-row>
+            </mk-form-panel>
+            <div class="row" style="height: 100%">
+                <div slot="buttons" class="pull-right " style="text-align:right" v-cloak>
+                    <su-button class="btn-operator" s-type="default" labeled="true" label-ico="plus"
+                               v-on:click="addDeviceInfo">新增
+                    </su-button>
+                    <su-button class="btn-operator" s-type="default" labeled="true" label-ico="edit"
+                               v-on:click="editDeviceInfo">编辑
+                    </su-button>
+                    <su-button class="btn-operator" s-type="default" labeled="true" label-ico="trash-o"
+                               v-on:click="delDeviceInfo">删除
+                    </su-button>
+                </div>
+                <div class="row" style="height: 100%">
+                    <table id="deviceInfoTable"></table>
+                </div>
+            </div>
+        </mk-panel>
+
+    </mk-left-right>
+</mk-panel>
+
+<script>
+    var web = new Vue({
+        el: "#device",
+        ready: function () {
+            this.initTree();
+        },
+        data: {
+            params: {
+                deviceType: '',
+                deviceName: '',
+                deviceCode: ''
+            },
+            treeData:[],
+            searchText:'',
+            flag:true
+        },
+        methods: {
+            /**
+             * 初始化设备类型树
+             */
+            initTree: function () {
+                var me = this;
+                $('#deviceType').tree({
+                    url: basePath + 'deviceTypeController/deviceTypeTree',
+                    method: 'GET',
+                    animate: true,
+                    dnd: true,
+                    onContextMenu: function (e, node) {
+                        e.preventDefault();
+                        $("#deviceType").tree("select", node.target);
+                        $('#menu').menu('show', {
+                            left: e.pageX,
+                            top: e.pageY
+                        });
+                    },
+                    // onLoadSuccess: function (node, data) {// 加载成功后折叠所有节点
+                    //     $('#deviceType').tree('collapseAll');
+                    // },
+                    onClick: function (node) {
+                        if (node.parent_id == 0) {
+                            me.params.deviceType = '';
+                            me.initAllDeviceInfoTable();
+                        } else {
+                            me.params.deviceType = node.id;
+                            me.initDeviceInfoTable();
+                        }
+
+                    },
+                    //节点放置时触发
+                    onDrop: function (target, source, point) {
+                        if (point == "append") {
+                            var targetNode = $("#deviceType").tree('getNode', target);
+                            if (source.parentId == targetNode.id) {
+                                return;
+                            }
+                            $.ajax({
+                                url: basePath + 'deviceTypeController/updatedeviceTypeTree',
+                                type: 'get',
+                                dataType: "json",
+                                contentType: "application/json;charset=UTF-8",
+                                data: {
+                                    id: source.id,
+                                    typeName:source.text,
+                                    parentId: targetNode.id
+                                },
+                                success: function (data) {
+                                    if (data.flag) {   // 修改成功刷新树
+                                        $("#deviceType").tree('reload');
+                                    } else {   // 修改失败弹出提示
+                                        MainFrameUtil.alert({
+                                            title: "提交信息",
+                                            body: data.msg
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                        $("#deviceType").tree('reload');
+                    },
+                    //节点放置之前触发
+                    onBeforeDrop: function (target, source, point) {
+                        if (point == "append") {
+                            var targetNode = $("#deviceType").tree('getNode', target);
+                            if (source.parent_id == targetNode.id) {
+                                return false;
+                            }else {
+                                alert("确认把 : " + source.text + "放到 : " + targetNode.text + " 节点下?")
+                            }
+                        }
+                        return false;
+                    },
+                });
+            },
+            //查找树
+            search2:function(){
+                var ss = $('#deviceType').tree("getRoots")
+                debugger
+                var value = this.searchText;
+                var treeData = this.getTreeData();
+                if(value==""){
+                    $('#deviceType').tree("loadData",treeData);
+                }else{
+                    var s = this.searchTree(treeData,value);
+                    $('#deviceType').tree("loadData",s);
+                    $('#deviceType').tree("expandAll");
+                }
+            },
+            //得到树的数据
+            getTreeData:function(){
+                if(this.flag){
+                    this.treeData = this.searchTree($('#deviceType').tree("getRoots"),"");
+                    this.flag = false;
+                }
+                return this.treeData;
+            },
+            //递归查找树
+            searchTree : function(array,value){
+                var orgTree = [];
+                for(var o in array){
+                    if(array[o].children){
+                        var children = this.searchTree(array[o].children,value);
+                        if(children.length>0||array[o].text.indexOf(value)!=-1){
+                            var s = this.copy(array[o]);
+                            if(children.length>0){
+                                s.children = children;
+                            }else{
+                                delete s["state"];
+                            }
+                            orgTree.push(s);
+                        }
+                    }else{
+                        if(array[o].text.indexOf(value)!=-1){
+                            orgTree.push(this.copy(array[o]));
+                        }
+                    }
+                }
+                return orgTree;
+            },
+            //复制数据
+            copy : function(source){
+                var result = {};
+                for (var key in source) {
+                    if(key=="id"||key=="text"||key=="state"||key=="attributes"){
+                            result[key] = source[key]
+                    }
+                }
+                return result
+            },
+            //初始化设备信息表格
+            initDeviceInfoTable: function () {
+                var me = this;
+                $("#deviceInfoTable").datagrid({
+                    url: basePath + "deviceInfoController/listDeviceInfo",
+                    height: 500,
+                    queryParams: me.params,
+                    width: "100%",
+                    method: 'POST',
+                    rownumbers: true,
+                    pagination: true,
+                    singleSelect: true,
+                    nowrap: false,
+                    fitColumns: true,
+                    columns: [[
+                        {hidden: true, field: '', title: 'id', width: 100},
+                        {field: 'typeName', title: '所属类别', width: 100},
+                        {hidden: true, field: 'deviceType', title: '所属类别编码', width: 100},
+                        {field: 'deviceName', title: '设备名称', width: 100},
+                        {field: 'deviceCode', title: '设备编号', width: 100}
+                    ]],
+                    rowStyler: function (idx, row) {
+                        return "height:35px;font-size:12px;";
+                    },
+                    onClickCell: function (rowIndex, field, value) {   // 点击设备名称查看详情
+                        if (field == "deviceName") {
+                            var rows = $('#deviceInfoTable').datagrid('getRows');//获得所有行
+                            var row = rows[rowIndex];  //获取选中行
+                            MainFrameUtil.openDialog({
+                                id: "deviceInfoDetail",
+                                href: basePath + 'page/deviceInfo-detail.html',
+                                params: row,   // 传入参数
+                                iframe: true,
+                                modal: true,
+                                width: 800,
+                                height: 300
+                            });
+                        }
+                    },
+
+                })
+            },
+            //显示所有设备信息数据
+            initAllDeviceInfoTable: function () {
+                var me = this;
+                $("#deviceInfoTable").datagrid({
+                    url: basePath + "deviceInfoController/listDeviceInfo",
+                    height: 500,
+                    // queryParams:me.params,
+                    width: "100%",
+                    method: 'POST',
+                    rownumbers: true,
+                    pagination: true,
+                    singleSelect: true,
+                    nowrap: false,
+                    fitColumns: true,
+                    columns: [[
+                        {hidden: true, field: '', title: 'id', width: 100},
+                        {field: 'typeName', title: '所属类别', width: 100},
+                        {field: 'deviceName', title: '设备名称', width: 100},
+                        {field: 'deviceCode', title: '设备编号', width: 100}
+                    ]],
+                    rowStyler: function (idx, row) {
+                        return "height:35px;font-size:12px;";
+                    },
+                    onClickCell: function (rowIndex, field, value) {   // 点击设备名称查看详情
+                        if (field == "deviceName") {
+                            var rows = $('#deviceInfoTable').datagrid('getRows');//获得所有行
+                            var row = rows[rowIndex];  //获取选中行
+                            MainFrameUtil.openDialog({
+                                id: "deviceInfoDetail",
+                                href: basePath + 'page/deviceInfo-detail.html',
+                                params: row,   // 传入参数
+                                iframe: true,
+                                modal: true,
+                                width: 800,
+                                height: 300
+                            });
+                        }
+                    },
+
+                })
+            },
+            //添加设备类型
+            addDeviceType: function () {
+                var node = $('#deviceType').tree('getSelected');
+                MainFrameUtil.openDialog({
+                    id: "addDeviceType",
+                    href: basePath + 'page/deviceType-add.html',
+                    params: node.id,
+                    iframe: true,
+                    modal: true,
+                    width: '50%',
+                    height: 300,
+                    onClose: function () { // 关闭时刷新表格
+                        $("#deviceType").tree('reload');
+                    }
+                });
+            },
+            //添加设备信息
+            addDeviceInfo: function () {
+                var node = $('#deviceType').tree('getSelected');
+                if (node == null) {
+                    MainFrameUtil.alert({
+                        title: "警告",
+                        body: "请先选择一个设备类型"
+                    })
+                    return;
+                } else {
+                    MainFrameUtil.openDialog({
+                        id: "addDeviceInfo",
+                        href: basePath + 'page/deviceInfo-add.html',
+                        params: node.id,
+                        iframe: true,
+                        modal: true,
+                        width: 1000,
+                        height: 400,
+                        onClose: function () { // 关闭时刷新表格
+                            $("#deviceInfoTable").datagrid('reload');
+                        }
+                    });
+                }
+            },
+            //编辑设备信息
+            editDeviceInfo: function () {
+                var row = $('#deviceInfoTable').datagrid('getSelected');
+                if (row == null) {
+                    MainFrameUtil.alert({
+                        title: "警告",
+                        body: "请先选择一条数据"
+                    })
+                    return;
+                } else {
+                    MainFrameUtil.openDialog({
+                        id: "deviceInfoEdit",
+                        href: basePath + 'page/deviceInfo-edit.html',
+                        params: row,   // 传入参数
+                        iframe: true,
+                        modal: true,
+                        width: 700,
+                        height: 400,
+                        onClose: function (params) {  // 关闭时刷新表格
+                            $("#deviceInfoTable").datagrid('reload');
+                        }
+                    });
+                }
+            },
+            //编辑设备类型
+            editDeviceType: function () {
+                var me = this;
+                var node = $('#deviceType').tree('getSelected');
+                MainFrameUtil.openDialog({
+                    id: "deviceTypeEdit",
+                    href: basePath + 'page/deviceType-edit.html',
+                    params: node,   // 传入参数
+                    iframe: true,
+                    modal: true,
+                    width: 500,
+                    height: 400,
+                    onClose: function (params) {  // 关闭时刷新
+                        $("#deviceType").tree('reload');
+                    }
+                });
+            },
+            //删除设备类型
+            delDeviceType: function () {
+                var node = $('#deviceType').tree('getSelected');
+                if (node.children.length != 0) {
+                    MainFrameUtil.alert({
+                        title: "警告",
+                        body: "当前设备类型下有子节点，不可删除"
+                    })
+                    return
+                } else {
+                    //如果用户选择删除全部，则删除设备类型和设备信息
+                    MainFrameUtil.confirm({
+                        title: "是否全部删除设备信息",
+                        body: "删除后不可恢复",
+                        onClose: function (type) {
+                            if (type == "ok") {      // 确定
+                                var id = node.id;
+                                $.ajax({
+                                    url: basePath + 'deviceTypeController/delDeviceType',
+                                    type: "GET",
+                                    dataType: "json",
+                                    data: {
+                                        id: id
+                                    },
+                                    success: function (data) {
+                                        if (data.flag != true) {   // 删除失败弹出提示
+                                            MainFrameUtil.alert({
+                                                title: "提交信息",
+                                                body: "删除失败！"
+                                            });
+                                            return;
+                                        } else {   // 删除成功刷新表格
+                                            $("#deviceType").tree('reload');
+                                            $("#deviceInfoTable").datagrid('reload');
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            },
+            //删除设备信息
+            delDeviceInfo: function () {
+                var row = $('#deviceInfoTable').datagrid('getSelected');
+                if (row == null) {
+                    MainFrameUtil.alert({
+                        title: "警告",
+                        body: "请先选择一条数据"
+                    })
+                    return
+                } else {
+                    MainFrameUtil.confirm({
+                        title: "您确认要删除吗?", body: "删除后不可恢复",
+                        onClose: function (type) {
+                            if (type == "ok") {      // 确定
+                                var id = row.id;
+                                $.ajax({
+                                    url: basePath + 'deviceInfoController/deleteDeviceInfo',
+                                    type: "GET",
+                                    dataType: "json",
+                                    data: {
+                                        id: id
+                                    },
+                                    success: function (data) {
+                                        if (data.flag != true) {   // 删除失败弹出提示
+                                            MainFrameUtil.alert({
+                                                title: "提交信息",
+                                                body: "删除失败！"
+                                            });
+                                        } else {   // 删除成功刷新表格
+                                            $("#deviceInfoTable").datagrid('reload');
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            },
+            //查询事件，刷新表格
+            search() {
+                $("#deviceInfoTable").datagrid('load');
+            }
+        }
+    })
+</script>
+</body>
+</html>

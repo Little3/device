@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../js/resource.js"></script>
+</head>
+<body>
+<div id="web1">
+    <su-form
+            v-ref:form
+            id="deviceInfoDetail"
+            :data-option="dataOption"
+            :data-validator.sync="valid">
+
+        <mk-panel title="设备信息详情" line="true" v-cloak height="auto">
+            <mk-form-panel>
+                <mk-form-row>
+                    <!-- 设备名称 -->
+                    <mk-form-col label="所属类别" required_icon="true" colspan="2">
+                        <su-textbox :data.sync="params.typeName" name="typeName" disabled=disabled></su-textbox>
+                    </mk-form-col>
+                </mk-form-row>
+                <mk-form-row>
+                <!-- 设备编号 -->
+                    <mk-form-col label="设备名称" required_icon="true" colspan="2">
+                        <su-textbox :data.sync="params.deviceName" name="deviceName" disabled=disabled></su-textbox>
+                    </mk-form-col>
+                </mk-form-row>
+                <mk-form-row>
+                    <!-- 设备编号 -->
+                    <mk-form-col label="设备编号" required_icon="true" colspan="2">
+                        <su-textbox :data.sync="params.deviceCode" name="deviceCode" disabled=disabled></su-textbox>
+                    </mk-form-col>
+                </mk-form-row>
+            </mk-form-panel>
+        </mk-panel>
+    </su-form>
+
+</div>
+<script>
+    new Vue({
+        el: "#web1",
+        ready: function () {
+            this.params = MainFrameUtil.getParams("deviceInfoDetail");
+        },
+        data: {
+            params:{
+                typeName:'',
+                deviceName:'',
+                deviceCode:''
+            },
+        },
+        methods:{
+
+        }
+    })
+</script>
+</body>
+</html>

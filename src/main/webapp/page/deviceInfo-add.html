@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../js/resource.js"></script>
+</head>
+<body>
+<div id="web1">
+    <su-form
+            v-ref:form
+            id="addDeviceInfo"
+            :data-option="dataOption"
+            :data-validator.sync="valid">
+            <mk-form-panel num="2" title="添加设备信息">
+                <mk-form-row>
+                    <!-- 类别名称 -->
+                    <mk-form-col label="类别名称" required_icon="true" >
+                        <su-textbox :data.sync="params.deviceName" name="deviceName"></su-textbox>
+                    </mk-form-col>
+                </mk-form-row>
+                <br>
+                <mk-form-row>
+                <!-- 类别编码 -->
+                    <mk-form-col label="类别编码" required_icon="true">
+                        <su-textbox :data.sync="params.deviceCode" name="deviceCode" ></su-textbox>
+                    </mk-form-col>
+                </mk-form-row>
+            </mk-form-panel>
+    </su-form>
+</div>
+<script>
+    new Vue({
+        el: "#web1",
+        ready: function () {
+            this.params.deviceType = MainFrameUtil.getParams("addDeviceInfo");
+            //添加弹出框按钮
+            MainFrameUtil.setDialogButtons([
+                {text:"保存",type:"primary",handler:this.save},
+                {text:"取消",handler:function(){MainFrameUtil.closeDialog("addDeviceInfo")}}
+            ],"addDeviceInfo");
+        },
+        data: {
+            params:{
+                deviceType:'',
+                deviceName:'',
+                deviceCode:''
+            },
+            dataOption: {
+                rules: { //验证规则
+                    deviceName: {required:true},
+                    deviceCode: {required:true},
+                },
+                messages: {//提示语
+                    deviceName: "这是一个必填字段1",
+                    deviceCode: "这是一个必填字段2"
+                },
+                valid: false   //通过验证标志
+            }
+        },
+        methods:{
+            save:function(){
+                var me =this;
+                this.$refs.form.valid();
+                if (this.valid == true) {//表示验证通过
+                    //后续处理逻辑
+                    $.ajax({
+                        type:"post",
+                        url:basePath+"deviceInfoController/insertDeviceInfo",
+                        contentType: 'application/json;charset=UTF-8',
+                        data:JSON.stringify(me.params),
+                        dataType:"json",
+                        success:function(data){
+                            if (data.flag==true) {
+                                MainFrameUtil.setParams({flag:"添加成功"},"addDeviceInfo");//必须保证此弹出框已经弹出,否则会报错
+                                MainFrameUtil.closeDialog("addDeviceInfo");//关闭弹出框
+                            }else{
+                                MainFrameUtil.setParams({flag:"添加失败"},"addDeviceInfo");//必须保证此弹出框已经弹出,否则会报错
+                                MainFrameUtil.closeDialog("addDeviceInfo");//关闭弹出框
+                            }
+
+                        }
+                    });
+
+                }
+
+            }
+        }
+    })
+</script>
+</body>
+</html>

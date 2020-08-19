@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../js/resource.js"></script>
+</head>
+<body>
+<div id="web1">
+    <su-form
+            v-ref:form
+            id="editDeviceType"
+            :data-option="dataOption"
+            :data-validator.sync="valid">
+        <mk-form-panel title="编辑设备类型">
+            <mk-form-row>
+                <!-- 类别名称 -->
+                <mk-form-col label="类别名称" required_icon="true" colspan="3">
+                    <su-textbox :data.sync="params.typeName"  name="typeName"></su-textbox>
+                </mk-form-col>
+            </mk-form-row>
+            <br>
+            <mk-form-row>
+                <!-- 类别编码 -->
+                <mk-form-col label="类别编码" required_icon="true" colspan="3">
+                    <su-textbox :data.sync="params.typeCode" name="typeCode" ></su-textbox>
+                </mk-form-col>
+            </mk-form-row>
+        </mk-form-panel>
+    </su-form>
+</div>
+<script>
+   var myVue =  new Vue({
+        el: "#web1",
+        ready: function () {
+            this.params = MainFrameUtil.getParams("deviceTypeEdit");
+            this.params.typeName = MainFrameUtil.getParams("deviceTypeEdit").text;
+            //添加弹出框按钮
+            MainFrameUtil.setDialogButtons([
+                {text:"保存",type:"primary",handler:this.save},
+                {text:"取消",handler:function(){MainFrameUtil.closeDialog("deviceTypeEdit")}}
+            ],"deviceTypeEdit");
+        },
+        data: {
+            params:{
+                id:'',
+                typeName:'',
+                typeCode:''
+            },
+            dataOption: {
+                rules: { //验证规则
+                    typeName: {required:true},
+                    typeCode: {required:true},
+                },
+                messages: {//提示语
+                    typeName: "这是一个必填字段1",
+                    typeCode: "这是一个必填字段2"
+                },
+                valid: false   //通过验证标志
+            }
+        },
+        methods:{
+            save:function(){
+                var me =this;
+                me.testTypeCode(me.params.typeCode);
+            },
+            saveDeviceType:function() {
+                var me = this;
+                this.$refs.form.valid();
+                if (this.valid == true) {//表示验证通过
+                    //后续处理逻辑
+                    $.ajax({
+                        type:"post",
+                        url:basePath+"deviceTypeController/updateDeviceType",
+                        contentType: 'application/json;charset=UTF-8',
+                        data:JSON.stringify(me.params),
+                        dataType:"json",
+                        success:function(data){
+                            console.log("ajax成功 ")
+                            if (data.flag==true) {
+                                MainFrameUtil.setParams({flag:"修改成功"},"deviceTypeEdit");//必须保证此弹出框已经弹出,否则会报错
+                                MainFrameUtil.closeDialog("deviceTypeEdit");//关闭弹出框
+                            }else{
+                                MainFrameUtil.setParams({flag:"修改失败"},"deviceTypeEdit");//必须保证此弹出框已经弹出,否则会报错
+                                MainFrameUtil.closeDialog("deviceTypeEdit");//关闭弹出框
+                            }
+
+                        }
+                    });
+
+                }
+            },
+            //检测编码是否重复
+            testTypeCode(typeCode){
+                var me = this;
+                $.ajax({
+                    url: basePath + 'deviceTypeController/testTypeCode',
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        typeCode: typeCode
+                    },
+                    success:function(data){
+                        if (data.msg == null ||data.msg == me.params.id) {
+                            me.saveDeviceType();
+                        } else {
+                            MainFrameUtil.alert({
+                                title: "警告",
+                                body: "该类别编码已存在！"
+                            });
+                            return;
+                        }
+                    }
+                });
+            }
+        }
+
+    })
+</script>
+</body>
+</html>
